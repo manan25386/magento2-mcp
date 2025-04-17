@@ -40,13 +40,6 @@ This is a Model Context Protocol (MCP) server that connects to a Magento 2 REST 
 npm install
 ```
 
-3. Configure your environment variables in `.env`:
-
-```
-MAGENTO_BASE_URL=https://your-magento-store.com/rest/V1
-MAGENTO_API_TOKEN=your-api-token
-```
-
 ## Usage
 
 ### Running the server directly
@@ -63,16 +56,26 @@ node test-mcp-server.js
 
 ### Using with Claude Desktop
 
-1. Copy the `claude_desktop_config.json` file to the Claude Desktop configuration directory:
+1. Check your path node with `which node`
+2. Go to the Developer settings and click "Edit config". This will open a JSON file.
+3. Add the following snippet within the `mcpServers`:
 
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+```
+    "magento2": {
+      "command": "/path/to/your/node",
+      "args": ["/path/to/mcp-server.js"],
+      "env": {
+        "MAGENTO_BASE_URL": "https://YOUR_DOMAIN/rest/V1",
+        "MAGENTO_API_TOKEN": "your-api-token"
+      }
+    }
+```
 
-2. Update the file path in the configuration to point to your `mcp-server.js` file.
-
-3. Restart Claude Desktop.
-
-4. You should now be able to ask Claude questions about products in your Magento store.
+3. Replace `/path/to/your/node` with the path you checked in step 1
+4. Replace `/path/to/mcp-server.js` with the path where you cloned this repo
+5. You can get an API token from System > Integrations in the Magento admin
+6. Restart Claude Desktop.
+7. You should now be able to ask Claude questions about products in your Magento store.
 
 ## Available Tools
 

@@ -255,6 +255,50 @@ function normalizeCountry(country) {
   return [countryInput.toUpperCase()];
 }
 
+// Helper function to fetch all pages for a given search criteria
+async function fetchAllPages(endpoint, baseSearchCriteria) {
+  const pageSize = 100; // Or make this configurable if needed
+  let currentPage = 1;
+  let allItems = [];
+  let totalCount = 0;
+  
+  do {
+    // Build search criteria for the current page, ensuring baseSearchCriteria doesn't already have pagination
+    let currentPageSearchCriteria = baseSearchCriteria;
+    if (!currentPageSearchCriteria.includes('searchCriteria[pageSize]')) {
+      currentPageSearchCriteria += `&searchCriteria[pageSize]=${pageSize}`;
+    }
+    if (!currentPageSearchCriteria.includes('searchCriteria[currentPage]')) {
+      currentPageSearchCriteria += `&searchCriteria[currentPage]=${currentPage}`;
+    } else {
+      // If currentPage is already there, replace it (less common case)
+      currentPageSearchCriteria = currentPageSearchCriteria.replace(/searchCriteria\[currentPage\]=\d+/, `searchCriteria[currentPage]=${currentPage}`);
+    }
+
+    // Make the API call for the current page
+    const responseData = await callMagentoApi(`${endpoint}?${currentPageSearchCriteria}`);
+    
+    if (responseData.items && Array.isArray(responseData.items)) {
+      allItems = allItems.concat(responseData.items);
+    }
+    
+    // Update total count (only needs to be set once)
+    if (currentPage === 1) {
+      totalCount = responseData.total_count || 0;
+    }
+    
+    // Check if we need to fetch more pages
+    if (totalCount <= allItems.length || !responseData.items || responseData.items.length < pageSize) {
+      break; // Exit loop if all items are fetched or last page had less than pageSize items
+    }
+    
+    currentPage++;
+    
+  } while (true); // Loop continues until break
+  
+  return allItems; // Return the aggregated list of items
+}
+
 // Create an MCP server
 const server = new McpServer({
   name: "magento-mcp-server",
@@ -827,21 +871,18 @@ server.tool(
                           `searchCriteria[filter_groups][2][filters][0][condition_type]=eq`;
       }
       
-      // Add pagination to get all results (we'll need to handle pagination for large result sets)
-      searchCriteria += `&searchCriteria[pageSize]=100&searchCriteria[currentPage]=1`;
-      
-      // Make the API call to get orders
-      const ordersData = await callMagentoApi(`/orders?${searchCriteria}`);
+      // Fetch all orders using the helper function
+      const allOrders = await fetchAllPages('/orders', searchCriteria);
       
       // Calculate total revenue
       let totalRevenue = 0;
       let totalTax = 0;
       let orderCount = 0;
       
-      if (ordersData.items && Array.isArray(ordersData.items)) {
-        orderCount = ordersData.items.length;
+      if (allOrders && Array.isArray(allOrders)) {
+        orderCount = allOrders.length;
         
-        ordersData.items.forEach(order => {
+        allOrders.forEach(order => {
           // Use grand_total which includes tax, shipping, etc.
           totalRevenue += parseFloat(order.grand_total || 0);
           
@@ -986,14 +1027,11 @@ server.tool(
                           `searchCriteria[filter_groups][2][filters][0][condition_type]=eq`;
       }
       
-      // Add pagination to get all results (we'll need to handle pagination for large result sets)
-      searchCriteria += `&searchCriteria[pageSize]=100&searchCriteria[currentPage]=1`;
-      
-      // Make the API call to get orders
-      const ordersData = await callMagentoApi(`/orders?${searchCriteria}`);
+      // Fetch all orders using the helper function
+      const allOrders = await fetchAllPages('/orders', searchCriteria);
       
       // Filter orders by country if provided
-      let filteredOrders = ordersData.items || [];
+      let filteredOrders = allOrders;
       if (country) {
         // Normalize country input
         const normalizedCountry = normalizeCountry(country);
@@ -1134,11 +1172,8 @@ server.tool(
                           `searchCriteria[filter_groups][2][filters][0][condition_type]=eq`;
       }
       
-      // Add pagination to get all results (we'll need to handle pagination for large result sets)
-      searchCriteria += `&searchCriteria[pageSize]=100&searchCriteria[currentPage]=1`;
-      
-      // Make the API call to get orders
-      const ordersData = await callMagentoApi(`/orders?${searchCriteria}`);
+      // Fetch all orders using the helper function
+      const allOrders = await fetchAllPages('/orders', searchCriteria);
       
       // Filter orders by country and calculate revenue
       let totalRevenue = 0;
@@ -1146,9 +1181,9 @@ server.tool(
       let orderCount = 0;
       let filteredOrders = [];
       
-      if (ordersData.items && Array.isArray(ordersData.items)) {
+      if (allOrders && Array.isArray(allOrders)) {
         // Filter orders by country
-        filteredOrders = ordersData.items.filter(order => {
+        filteredOrders = allOrders.filter(order => {
           // Check billing address country
           const billingCountry = order.billing_address?.country_id;
           
@@ -1253,9 +1288,10 @@ server.tool(
                                  `searchCriteria[filter_groups][0][filters][0][value]=${encodeURIComponent(email)}&` +
                                  `searchCriteria[filter_groups][0][filters][0][condition_type]=eq`;
       
-      const ordersData = await callMagentoApi(`/orders?${orderSearchCriteria}`);
+      // Fetch all orders for the customer using the helper function
+      const allCustomerOrders = await fetchAllPages('/orders', orderSearchCriteria);
       
-      if (!ordersData.items || ordersData.items.length === 0) {
+      if (!allCustomerOrders || allCustomerOrders.length === 0) {
         return {
           content: [
             {
@@ -1271,7 +1307,7 @@ server.tool(
       const productSkus = new Set();
       
       // First, collect all unique product SKUs from all orders
-      ordersData.items.forEach(order => {
+      allCustomerOrders.forEach(order => {
         if (order.items && Array.isArray(order.items)) {
           order.items.forEach(item => {
             if (item.sku) {
@@ -1306,7 +1342,7 @@ server.tool(
           firstname: customer.firstname,
           lastname: customer.lastname
         },
-        orders: ordersData.items.map(order => ({
+        orders: allCustomerOrders.map(order => ({
           order_id: order.entity_id,
           increment_id: order.increment_id,
           created_at: order.created_at,

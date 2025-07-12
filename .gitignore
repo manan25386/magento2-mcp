@@ -81,3 +81,4 @@ temp/
 
 # MCP specific
 claude_desktop_config.json
+.vercel

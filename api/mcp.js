@@ -3,7 +3,7 @@ import axios from "axios";
 import https from "https";
 import { format, parseISO, isValid, subDays, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear } from 'date-fns';
 
-// --- Helper Functions from your mcp-server.js ---
+// --- Helper Functions (from your mcp-server.js) ---
 
 function parseDateExpression(dateExpression) {
   const now = new Date();
@@ -45,13 +45,13 @@ class Magento2MCPServer {
   // --- Tool Method Router ---
   async callTool(toolName, args) {
     console.log(`Manually calling tool: ${toolName}`, args);
-    // Add all your tools from mcp-server.js here
     switch (toolName) {
       case "get_product_by_sku": return this.getProductBySku(args.sku);
       case "get_revenue": return this.getRevenue(args);
       case "get_order_count": return this.getOrderCount(args);
       case "get_product_sales": return this.getProductSales(args);
-      // We will add get_order_status later, as it was not in your new file.
+      // THE FIX: Add the get_order_status case
+      case "get_order_status": return this.getOrderStatus(args.orderId);
       default: throw new Error(`Unknown tool: ${toolName}`);
     }
   }
@@ -63,13 +63,14 @@ class Magento2MCPServer {
         { name: "get_revenue", description: "Get the total revenue for a given date range." },
         { name: "get_order_count", description: "Get the number of orders for a given date range." },
         { name: "get_product_sales", description: "Get statistics about products sold in a date range." },
+        // THE FIX: Add get_order_status to the list of tools
+        { name: "get_order_status", description: "Get the status of an order by its ID." },
       ]
     };
   }
 
   // --- Core Methods ---
   
-  // CORRECTED version from your mcp-server.js
   async callMagentoApi(endpoint, method = 'GET', data = null) {
     const url = `${this.baseUrl}/${endpoint}`;
     const headers = { 'Authorization': `Bearer ${this.apiToken}`, 'Content-Type': 'application/json' };
@@ -77,7 +78,7 @@ class Magento2MCPServer {
       method,
       url,
       headers,
-      data: data ? JSON.stringify(data) : undefined, // THIS IS THE CRITICAL FIX
+      data: data ? JSON.stringify(data) : undefined,
       httpsAgent: new https.Agent({ rejectUnauthorized: false })
     };
     try {
@@ -106,7 +107,23 @@ class Magento2MCPServer {
     return allItems;
   }
 
-  // --- Tool Logic (Ported from mcp-server.js) ---
+  // --- Tool Logic ---
+
+  // THE FIX: Add the getOrderStatus function back in
+  async getOrderStatus(orderId) {
+    try {
+      const order = await this.callMagentoApi(`orders/${encodeURIComponent(orderId)}`);
+      return { content: [{ type: "text", text: JSON.stringify(order, null, 2) }] };
+    } catch (error) {
+      console.log(`Order with ID ${orderId} not found directly, searching by increment_id...`);
+      const searchCriteria = `searchCriteria[filterGroups][0][filters][0][field]=increment_id&searchCriteria[filterGroups][0][filters][0][value]=${encodeURIComponent(orderId)}&searchCriteria[filterGroups][0][filters][0][conditionType]=eq`;
+      const searchResult = await this.callMagentoApi(`orders?${searchCriteria}`);
+      if (searchResult.items && searchResult.items.length > 0) {
+        return { content: [{ type: "text", text: JSON.stringify(searchResult.items[0], null, 2) }] };
+      }
+      throw new Error(`Order not found with ID or Increment ID: ${orderId}`);
+    }
+  }
 
   async getProductBySku(sku) {
     const productData = await this.callMagentoApi(`products/${encodeURIComponent(sku)}`);
@@ -136,8 +153,6 @@ class Magento2MCPServer {
   }
 
   async getOrderCount({ date_range, status }) {
-    // This logic is simplified as fetchAllPages will get the full count.
-    // We can reuse getRevenue's logic for this.
     const revenueData = await this.getRevenue({ date_range, status });
     const parsedResult = JSON.parse(revenueData.content[0].text);
     const result = {
@@ -176,7 +191,7 @@ class Magento2MCPServer {
   }
 }
 
-// --- Vercel Handler (Unchanged from our working manual version) ---
+// --- Vercel Handler ---
 const mcpLogic = new Magento2MCPServer();
 
 export default async function handler(req, res) {

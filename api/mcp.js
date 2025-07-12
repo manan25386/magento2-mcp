@@ -195,17 +195,53 @@ class Magento2MCPServer {
 const mcpServer = new Magento2MCPServer();
 
 // The main Vercel serverless function handler
+// The main Vercel serverless function handler
 export default async function handler(req, res) {
   // Set CORS headers for all responses
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-MCP-Version'); // Add any other required headers
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-MCP-Version');
 
   // Handle pre-flight CORS requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-  
-  // Let the MCP SDK server handle the request and generate the response
-  await mcpServer.server.handle(req, res);
+
+  // A simple health check for GET requests
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      status: 'online',
+      message: 'MCP server is running. Use POST for MCP methods.'
+    });
+  }
+
+  // Handle MCP methods via POST
+  if (req.method === 'POST') {
+    try {
+      // The body of the POST request is the MCP request object.
+      // Vercel automatically parses the JSON body into `req.body`.
+      const mcpRequest = req.body;
+      
+      console.log("Received MCP Request:", JSON.stringify(mcpRequest, null, 2));
+
+      // Pass the entire request object to the MCP server's .request() method.
+      const mcpResponse = await mcpServer.server.request(mcpRequest);
+
+      console.log("Sending MCP Response:", JSON.stringify(mcpResponse, null, 2));
+
+      // The SDK returns the complete response object, which we send back as JSON.
+      return res.status(200).json(mcpResponse);
+
+    } catch (error) {
+      console.error("Error processing MCP request:", error);
+      // If an unexpected error occurs, return a standard server error.
+      return res.status(500).json({
+        error: 'An internal error occurred',
+        message: error.message
+      });
+    }
+  }
+
+  // If the method is not GET, POST, or OPTIONS, it's not allowed.
+  return res.status(405).json({ error: 'Method Not Allowed' });
 }

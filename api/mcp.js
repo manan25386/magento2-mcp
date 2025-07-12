@@ -69,8 +69,10 @@ class Magento2MCPServer {
   }
 
   setupToolHandlers() {
+    console.log("👷 Initializing Magento2MCPServer...");
     // List all available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+        console.log("🧩 Registering tool handlers...");
       return {
         tools: [
           {

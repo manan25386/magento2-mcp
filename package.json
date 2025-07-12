@@ -1,22 +1,27 @@
 {
-  "name": "mcp-magento2",
+  "name": "magento2-mcp-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "claude-magento-client.js",
+  "description": "A MCP server for Magento 2 - Vercel deployment",
+  "main": "api/mcp.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node mcp-server.js",
+    "dev": "node mcp-server.js",
+    "test": "node test-mcp-server.js",
+    "vercel-build": "echo 'Build completed'"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@modelcontextprotocol/sdk": "^1.6.1",
-    "axios": "^1.8.1",
-    "body-parser": "^1.20.3",
-    "date-fns": "^3.6.0",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "zod": "^3.24.2"
-  }
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "axios": "^1.6.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["mcp", "magento2", "vercel", "serverless"],
+  "author": "manan25386",
+  "license": "ISC"
 }

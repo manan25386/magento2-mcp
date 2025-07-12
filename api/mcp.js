@@ -66,10 +66,13 @@ class Magento2MCPServer {
     }
   }
 
-  setupToolHandlers() {
-    // Handler for listing all available tools
+// CORRECTED VERSION
+setupToolHandlers() {
+    console.log("🧩 Registering tool handlers...");
+
+    // CORRECT: Use ListToolsRequestSchema for listing tools.
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      console.log("MCP Request: tools/list");
+      console.log("MCP Request Received: tools/list");
       return {
         tools: [
           { name: "get_product_by_sku", description: "Get detailed information about a product by its SKU.", inputSchema: { type: "object", properties: { sku: { type: "string" } }, required: ["sku"] } },
@@ -82,10 +85,10 @@ class Magento2MCPServer {
       };
     });
 
-    // Handler for executing a tool call
+    // CORRECT: This handler for calling tools was already correct and remains.
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      console.log(`MCP Request: tools/call - ${name}`, args);
+      console.log(`MCP Request Received: tools/call - Tool: ${name}`, args);
 
       try {
         switch (name) {
@@ -110,7 +113,6 @@ class Magento2MCPServer {
       }
     });
   }
-
   // --- Tool Implementation Methods ---
   
   async getProductBySku(sku) {

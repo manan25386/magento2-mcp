@@ -12,6 +12,9 @@ const httpsAgent = new https.Agent({
 
 class Magento2MCPServer {
   constructor() {
+
+     console.log("👷 Initializing Magento2MCPServer...");
+
     this.baseUrl = process.env.MAGENTO_BASE_URL;
   this.apiToken = process.env.MAGENTO_API_TOKEN;
 
@@ -21,6 +24,7 @@ class Magento2MCPServer {
   if (!this.baseUrl || !this.apiToken) {
     throw new Error("MAGENTO_BASE_URL and MAGENTO_API_TOKEN are required");
   }
+    this.setupToolHandlers();
     this.server = new Server(
       {
         name: "magento2-mcp-server",
@@ -40,7 +44,7 @@ class Magento2MCPServer {
       throw new Error("MAGENTO_BASE_URL and MAGENTO_API_TOKEN are required");
     }
 
-    this.setupToolHandlers();
+    //this.setupToolHandlers();
   }
 
   async callMagentoApi(endpoint, method = "GET", data = null) {

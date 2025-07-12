@@ -362,6 +362,8 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
+        console.log("Received POST request:", req.body);
+
       const server = new Magento2MCPServer();
       const { tool, arguments: args } = req.body;
 

@@ -191,11 +191,14 @@ class Magento2MCPServer {
 
   async getOrderStatus(orderId) {
     try {
+        console.log("Trying to get order by entity_id:", orderId);
       // First try to get order by entity_id
       let order;
       try {
         order = await this.callMagentoApi(`orders/${orderId}`);
+        console.log("Order found by entity_id");
       } catch (error) {
+        console.log("Failed by entity_id, trying increment_id");
         // If that fails, search by increment_id
         const searchResult = await this.callMagentoApi(
           `orders?searchCriteria[filterGroups][0][filters][0][field]=increment_id&searchCriteria[filterGroups][0][filters][0][value]=${orderId}&searchCriteria[filterGroups][0][filters][0][conditionType]=eq`
@@ -203,6 +206,7 @@ class Magento2MCPServer {
         
         if (searchResult.items && searchResult.items.length > 0) {
           order = searchResult.items[0];
+          console.log("Order found by increment_id");
         } else {
           throw new Error(`Order not found with ID: ${orderId}`);
         }
@@ -225,6 +229,7 @@ class Magento2MCPServer {
         ]
       };
     } catch (error) {
+        console.error("Error in getOrderStatus:", error);
       throw new Error(`Failed to get order status: ${error.message}`);
     }
   }

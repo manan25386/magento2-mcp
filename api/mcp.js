@@ -150,6 +150,9 @@ class Magento2MCPServer {
 
     // Handle tool calls
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+         console.log("⚙️ MCP Tool Call Handler triggered");
+        console.log("🛠 Tool:", request.params.name);
+        console.log("📦 Arguments:", request.params.arguments);
       const { name, arguments: args } = request.params;
 
       try {
